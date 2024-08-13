@@ -1,0 +1,126 @@
+local screenGui = Instance.new("ScreenGui", game.Players.LocalPlayer:WaitForChild("PlayerGui"))
+
+local function createUIElement(class, props)
+    local element = Instance.new(class)
+    for prop, value in pairs(props) do
+        element[prop] = value
+    end
+    element.Parent = screenGui
+    return element
+end
+
+local function createRainbowEffect(element)
+    local hue = 0
+    game:GetService("RunService").RenderStepped:Connect(function()
+        hue = (hue + 1) % 360
+        element.BackgroundColor3 = Color3.fromHSV(hue / 360, 1, 1)
+    end)
+end
+
+local function makeDraggable(frame)
+    local dragging, dragInput, dragStart, startPos
+    local function update(input)
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+end
+
+local function createSectionFrame(title, position)
+    local frame = createUIElement("Frame", {Size = UDim2.new(0, 350, 0, 300), Position = position, BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)})
+    local titleLabel = createUIElement("TextLabel", {Text = title, Size = UDim2.new(1, 0, 0, 50), BackgroundColor3 = Color3.new(0.1, 0.1, 0.1), Parent = frame})
+    local hideButton = createUIElement("TextButton", {Text = "Hide", Size = UDim2.new(0, 50, 0, 50), Position = UDim2.new(1, -50, 0, 0), Parent = frame})
+    hideButton.MouseButton1Click:Connect(function()
+        frame.Visible = not frame.Visible
+        hideButton.Text = frame.Visible and "Hide" or "Show"
+    end)
+    makeDraggable(frame)
+    return frame
+end
+
+local followFrame = createSectionFrame("Follow Player", UDim2.new(0, 10, 0, 10))
+local followTextbox = createUIElement("TextBox", {PlaceholderText = "Enter player name", Size = UDim2.new(0, 200, 0, 50), Position = UDim2.new(0, 10, 0, 60), Parent = followFrame})
+local followButton = createUIElement("TextButton", {Text = "Go", Size = UDim2.new(0, 100, 0, 50), Position = UDim2.new(0, 220, 0, 60), Parent = followFrame})
+createRainbowEffect(followTextbox)
+createRainbowEffect(followButton)
+
+followButton.MouseButton1Click:Connect(function()
+    local followPlayer = game.Players:FindFirstChild(followTextbox.Text)
+    game:GetService("RunService").Stepped:Connect(function()
+        if followPlayer and followPlayer.Character and followPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local playerCharacter = game.Players.LocalPlayer.Character
+            if playerCharacter and playerCharacter:FindFirstChild("Humanoid") then
+                local targetPosition = followPlayer.Character.HumanoidRootPart.Position
+                playerCharacter.Humanoid:MoveTo(targetPosition)
+            end
+        end
+    end)
+end)
+
+local speedFrame = createSectionFrame("Change Speed", UDim2.new(0, 10, 0, 320))
+local speedTextbox = createUIElement("TextBox", {PlaceholderText = "Enter speed", Size = UDim2.new(0, 200, 0, 50), Position = UDim2.new(0, 10, 0, 60), Parent = speedFrame})
+local speedButton = createUIElement("TextButton", {Text = "Change Speed", Size = UDim2.new(0, 100, 0, 50), Position = UDim2.new(0, 220, 0, 60), Parent = speedFrame})
+createRainbowEffect(speedTextbox)
+createRainbowEffect(speedButton)
+
+speedButton.MouseButton1Click:Connect(function()
+    local speed = tonumber(speedTextbox.Text)
+    if speed then
+        local character = game.Players.LocalPlayer.Character
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.WalkSpeed = speed
+        end
+    end
+end)
+
+local spinFrame = createSectionFrame("Spin", UDim2.new(0, 10, 0, 630))
+local spinLabel = createUIElement("TextLabel", {Text = "Spin: Off", Size = UDim2.new(0, 200, 0, 50), Position = UDim2.new(0, 10, 0, 60), Parent = spinFrame})
+local spinButton = createUIElement("TextButton", {Text = "On/Off", Size = UDim2.new(0, 100, 0, 50), Position = UDim2.new(0, 220, 0, 60), Parent = spinFrame})
+local spinSpeedTextbox = createUIElement("TextBox", {PlaceholderText = "Enter spin speed", Size = UDim2.new(0, 200, 0, 50), Position = UDim2.new(0, 10, 0, 120), Parent = spinFrame})
+local spinSpeedButton = createUIElement("TextButton", {Text = "Set Spin Speed", Size = UDim2.new(0, 100, 0, 50), Position = UDim2.new(0, 220, 0, 120), Parent = spinFrame})
+createRainbowEffect(spinLabel)
+createRainbowEffect(spinButton)
+createRainbowEffect(spinSpeedTextbox)
+createRainbowEffect(spinSpeedButton)
+
+spinButton.MouseButton1Click:Connect(function()
+    spinEnabled = not spinEnabled
+    spinLabel.Text = "Spin: " .. (spinEnabled and "On" or "Off")
+end)
+
+spinSpeedButton.MouseButton1Click:Connect(function()
+    local speed = tonumber(spinSpeedTextbox.Text)
+    if speed then
+        spinSpeed = speed
+    end
+end)
+
+game:GetService("RunService").Stepped:Connect(function()
+    if spinEnabled then
+        local character = game.Players.LocalPlayer.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            character.HumanoidRootPart.CFrame = character.HumanoidRootPart.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
+        end
+    end
+end)
